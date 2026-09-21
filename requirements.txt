@@ -1,3 +1,4 @@
 streamlit
 groq
 fpdf2
+reportlab
