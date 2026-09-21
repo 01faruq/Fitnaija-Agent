@@ -1,20 +1,18 @@
 import os
 import io
 import streamlit as st
-from groq import Groq
+from openai import OpenAI
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
 
-# Page Configuration
 st.set_page_config(
-    page_title="FitNaija+ AI Engine",
+    page_title="FitNaija+ Agent Engine",
     page_icon="🌿",
     layout="wide"
 )
 
-# Custom Styling
 st.markdown("""
     <style>
     .main-title { font-size: 2.2rem; font-weight: 700; color: #1E4620; margin-bottom: 0px; }
@@ -23,21 +21,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<p class="main-title">🌿 FitNaija+ AI Health Engine</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">Culturally aligned African nutrition and joint-safe fitness recommendations.</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-title">🌿 FitNaija+ Agent Engine</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">Multi-agent localized African nutrition and joint-safe fitness planning.</p>', unsafe_allow_html=True)
 
-# API Key Retrieval
+# Secure API Key Retrieval
 api_key = st.secrets.get("GROQ_API_KEY", None) or os.environ.get("GROQ_API_KEY", None)
 
 if not api_key:
     api_key = st.sidebar.text_input("Enter Groq API Key:", type="password")
     if not api_key:
-        st.info("💡 Please provide a Groq API key in the sidebar or Streamlit Secrets to begin.")
+        st.info("💡 Please provide your Groq API key in the sidebar or Streamlit Secrets to begin.")
         st.stop()
 
-client = Groq(api_key=api_key)
+# Initialize OpenAI client targeting Groq endpoint
+client = OpenAI(
+    api_key=api_key,
+    base_url="https://api.groq.com/openai/v1"
+)
 
-# Input Form
 with st.form("fitnaija_form"):
     col1, col2, col3 = st.columns(3)
     
@@ -72,7 +73,7 @@ with st.form("fitnaija_form"):
 
     submit_button = st.form_submit_button("Generate Personalized Plan 🚀")
 
-# Scientific Calculations
+# BMR and TDEE math
 height_m = height / 100.0
 bmi = weight / (height_m ** 2)
 
@@ -81,7 +82,7 @@ if gender == "Male":
 else:
     bmr = 10 * weight + 6.25 * height - 5 * age - 161
 
-tdee = bmr * 1.2  # Sedentary multiplier
+tdee = bmr * 1.2
 target_cal = int(tdee - 450) if "Loss" in goal else int(tdee)
 
 def generate_pdf(plan_content):
@@ -89,17 +90,17 @@ def generate_pdf(plan_content):
     doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
     
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor("#1E4620"), spaceAfter=12)
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, textColor=colors.HexColor("#1E4620"), spaceAfter=10)
     body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=8)
     
     story = [
         Paragraph("FitNaija+ Personalized Health Plan", title_style),
-        Paragraph(f"<b>Biometric Overview:</b> BMI: {bmi:.1f} | Caloric Target: ~{target_cal} kcal/day", body_style),
+        Paragraph(f"<b>Biometric Overview:</b> BMI: {bmi:.1f} | Daily Caloric Target: ~{target_cal} kcal", body_style),
         Spacer(1, 10)
     ]
     
-    for paragraph in plan_content.split("\n\n"):
-        clean_p = paragraph.replace("*", "").replace("#", "").strip()
+    for p in plan_content.split("\n\n"):
+        clean_p = p.replace("*", "").replace("#", "").strip()
         if clean_p:
             story.append(Paragraph(clean_p.replace("\n", "<br/>"), body_style))
             story.append(Spacer(1, 4))
@@ -108,48 +109,44 @@ def generate_pdf(plan_content):
     pdf_buffer.seek(0)
     return pdf_buffer
 
-# Agent Execution
 if submit_button:
     with st.spinner("FitNaija+ multi-agent engine compiling your cultural health roadmap..."):
-        system_instruction = f"""
+        instructions = f"""
         You are the clinical AI brain of FitNaija+, an African preventative health engine.
-        Language to output: {output_lang}.
-        User Metrics:
+        Target Language: {output_lang}.
+        User Profile:
         - BMI: {bmi:.1f} ({'Obese' if bmi >= 30 else 'Overweight' if bmi >= 25 else 'Normal'})
         - Daily Target: ~{target_cal} kcal/day.
-        - Cultural Diet Archetype: {culture}
+        - Cultural Cuisine Archetype: {culture}
         - Budget: {budget}
         - Fitness Level: {fit_level}
         - Joint Discomfort: {joint_discomfort}
 
-        Generate a clear, respectful, and clinically safe recommendation containing:
-        1. 📊 BIOMETRIC TARGET & HYDRATION: Summarize calories, portion control rule (e.g., fist rule for swallows, palm rule for lean protein), and water intake.
-        2. 🍲 LOCAL NUTRITION REGIMEN: Detail exact dishes matching {culture}. Crucially specify how to prepare them safely (e.g., drastic reduction of palm/groundnut oil, boiling instead of frying, bulking soups with un-oiled vegetable leaves like Ewedu or Kuka).
-        3. 🚶 JOINT-SAFE EXERCISE PRESCRIPTION: 3 safe physical movements for home. If joint discomfort is YES, absolutely prohibit running, lunges, and jumping; prescribe seated leg extensions, wall push-ups, or brisk flat-surface walking.
-        4. 💡 CULTURAL COACHING & MINDSET: Encouraging advice written naturally in {output_lang}.
+        Structure your advice into four exact sections:
+        1. BIOMETRIC TARGET & HYDRATION: Summarize calorie targets, palm/fist portion control for swallows, and water goals.
+        2. LOCAL NUTRITION REGIMEN: Detail exact daily meals matching {culture}. Emphasize reducing palm/groundnut oil, substituting fried proteins with boiled/grilled alternatives, and bulking soups with local greens (e.g., Ewedu, Kuka, Okra).
+        3. JOINT-SAFE EXERCISE PRESCRIPTION: 3 low-impact exercises matching their mobility. If joint issues exist, strictly avoid squats, lunges, and jumping; prescribe seated movements, wall push-ups, and flat walking.
+        4. COACH'S MOTIVATION: An encouraging closing written naturally in {output_lang}.
         """
 
         try:
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": f"Generate my complete plan in {output_lang}."}
-                ],
-                temperature=0.3
+            # Using the Responses API with GPT OSS 120B on Groq
+            response = client.responses.create(
+                model="openai/gpt-oss-120b",
+                instructions=instructions,
+                input=f"Generate the complete clinical fitness and nutrition plan for this user in {output_lang}."
             )
             
-            plan_text = response.choices[0].message.content
+            # Extract content from Responses object
+            plan_text = response.output[0].content[0].text.value if hasattr(response, 'output') else str(response)
 
-            # Visual Display
-            st.success("Plan successfully generated!")
+            st.success("Plan generated successfully!")
             
             col_res1, col_res2 = st.columns([2, 1])
             
             with col_res1:
                 st.markdown(plan_text)
                 
-                # Download PDF
                 pdf_data = generate_pdf(plan_text)
                 st.download_button(
                     label="📥 Download Plan as Official PDF",
@@ -159,8 +156,8 @@ if submit_button:
                 )
 
             with col_res2:
-                st.markdown("### 🏃 Form & Technique Guides")
-                st.info("Demonstrations for low-impact, joint-safe movements:")
+                st.markdown("### 🏃 Visual Movement Guides")
+                st.info("Form guide for safe movement execution:")
                 st.image("https://media.giphy.com/media/l3q2wnlw4AbnzNvE8/giphy.gif", caption="Joint-Safe Wall Push-ups")
                 st.image("https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif", caption="Low-Impact Chair Squats")
                 st.image("https://media.giphy.com/media/3o6Zt6ML6BklcajjsA/giphy.gif", caption="March-in-Place Cardio")
