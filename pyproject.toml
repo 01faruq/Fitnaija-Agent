@@ -1,0 +1,14 @@
+[project]
+name = "fitnaija-agent"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "edge-tts>=7.2.8",
+    "gtts>=2.5.4",
+    "openai>=3.16.2",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "reportlab>=5.0.1",
+    "streamlit>=1.64.0",
+]
